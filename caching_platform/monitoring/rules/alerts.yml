@@ -1,0 +1,82 @@
+groups:
+  - name: caching_platform_alerts
+    rules:
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: cpu_usage_percent > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 85% for more than 5 minutes"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: memory_usage_percent > 90
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is above 90% for more than 2 minutes"
+
+      # Low cache hit ratio
+      - alert: LowCacheHitRatio
+        expr: cache_hit_ratio < 0.8
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Low cache hit ratio"
+          description: "Cache hit ratio is below 80% for more than 10 minutes"
+
+      # Redis node down
+      - alert: RedisNodeDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Redis node is down"
+          description: "Redis node {{ $labels.instance }} is not responding"
+
+      # High response time
+      - alert: HighResponseTime
+        expr: http_request_duration_seconds{quantile="0.95"} > 0.1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High response time"
+          description: "95th percentile response time is above 100ms"
+
+      # High error rate
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High error rate"
+          description: "Error rate is above 5% for more than 3 minutes"
+
+      # Tenant quota exceeded
+      - alert: TenantQuotaExceeded
+        expr: tenant_memory_usage_bytes / tenant_memory_quota_bytes > 0.95
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Tenant quota nearly exceeded"
+          description: "Tenant {{ $labels.tenant }} is using more than 95% of allocated quota"
+
+      # Scaling agent inactive
+      - alert: ScalingAgentInactive
+        expr: scaling_agent_last_run_timestamp < (time() - 300)
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Scaling agent inactive"
+          description: "Scaling agent hasn't run for more than 5 minutes"

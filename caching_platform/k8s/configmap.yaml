@@ -1,0 +1,39 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: caching-platform-config
+  namespace: caching-platform
+data:
+  config.yaml: |
+    platform:
+      name: "Kubernetes Caching Platform"
+      environment: "production"
+      debug: false
+    
+    redis:
+      cluster:
+        enabled: true
+        nodes: 6
+        replicas: 1
+      memory:
+        max_memory: "2gb"
+        eviction_policy: "allkeys-lru"
+    
+    scaling:
+      enabled: true
+      min_nodes: 3
+      max_nodes: 20
+      target_cpu: 70
+      target_memory: 80
+    
+    monitoring:
+      metrics_interval: 30
+      health_check_interval: 10
+    
+    security:
+      authentication:
+        enabled: true
+        method: "jwt"
+      encryption:
+        at_rest: true
+        in_transit: true
