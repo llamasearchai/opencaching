@@ -9,7 +9,7 @@
 [![Production Ready](https://img.shields.io/badge/Production-Ready-brightgreen.svg)](#)
 [![Professional](https://img.shields.io/badge/Quality-Professional-gold.svg)](#)
 
-**Enterprise-grade distributed caching platform with autonomous AI agents, multi-tenant architecture, and intelligent scaling capabilities.**
+**Production-grade distributed caching platform with autonomous AI agents, multi-tenant architecture, and intelligent scaling capabilities.**
 
 ## Overview
 
@@ -160,8 +160,8 @@ This project is licensed under the MIT License. See the [LICENSE](caching_platfo
 ## About
 
 **Author**: Nik Jois  
-**Email**: nikjois@llamasearch.ai  
-**Organization**: LlamaSearch AI  
+**Email**: nikjois@users.noreply.github.com  
+**Documentation**: https://llamasearchai.github.io/opencaching  
 **Version**: 1.0.0
 
 Built with dedication for enterprise-scale caching infrastructure needs. This platform represents the culmination of best practices in distributed systems, AI-powered automation, and enterprise security.
