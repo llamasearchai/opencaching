@@ -1,0 +1,198 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  release:
+    types: [ published ]
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # Code quality and validation
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -e .
+    
+    - name: Validate package structure
+      run: |
+        echo "Validating package imports..."
+        python -c "import caching_platform; print('Package imports successfully')"
+        python -c "from caching_platform import get_settings; print('Settings:', get_settings().platform_name)"
+        python -c "from caching_platform import get_ai_manager; print('AI Manager available')"
+        echo "Package structure validation completed"
+
+  # Comprehensive testing
+  test:
+    runs-on: ubuntu-latest
+    needs: validate
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    
+    services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/requirements.txt') }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -e .
+    
+    - name: Run basic functionality tests
+      run: |
+        echo "Running basic tests..."
+        python test_basic.py
+        echo "Basic tests completed successfully"
+    
+    - name: Run comprehensive platform tests
+      run: |
+        echo "Running comprehensive tests..."
+        python test_complete_platform.py
+        echo "Comprehensive tests completed successfully"
+      env:
+        REDIS_HOST: localhost
+        REDIS_PORT: 6379
+
+  # CLI validation
+  cli-test:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install -e .
+    
+    - name: Test CLI commands
+      run: |
+        echo "Testing CLI interface..."
+        python -m caching_platform.cli.interface --help
+        echo "CLI help command working"
+        python -c "from caching_platform.cli.interface import cli; print('CLI interface available with', len(cli.commands) if hasattr(cli, 'commands') else 'validated', 'commands')"
+        echo "CLI validation completed"
+
+  # Build validation
+  build:
+    runs-on: ubuntu-latest
+    needs: [validate, test, cli-test]
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    
+    - name: Build Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        platforms: linux/amd64
+        push: false
+        tags: caching-platform:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  # Documentation validation
+  docs-check:
+    runs-on: ubuntu-latest
+    needs: validate
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check documentation quality
+      run: |
+        echo "Validating documentation..."
+        
+        # Check for placeholders
+        if grep -r "TODO\|FIXME\|XXX\|PLACEHOLDER" README.md CHANGELOG.md || true; then
+          echo "Found placeholders in documentation"
+          exit 1
+        fi
+        
+        # Verify required files exist
+        test -f README.md || (echo "README.md missing" && exit 1)
+        test -f CHANGELOG.md || (echo "CHANGELOG.md missing" && exit 1)
+        test -f LICENSE || (echo "LICENSE missing" && exit 1)
+        test -f requirements.txt || (echo "requirements.txt missing" && exit 1)
+        test -f setup.py || (echo "setup.py missing" && exit 1)
+        
+        echo "Documentation validation passed"
+        echo "No placeholders found in documentation"
+        echo "All required files present"
+
+  # Quality gates
+  quality-gate:
+    runs-on: ubuntu-latest
+    needs: [validate, test, cli-test, build, docs-check]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Quality gate validation
+      run: |
+        echo "All quality gates passed:"
+        echo "  Package validation"
+        echo "  Comprehensive testing"
+        echo "  CLI functionality"
+        echo "  Docker build"
+        echo "  Documentation quality"
+        echo ""
+        echo "Repository is ready for production deployment!"
+        echo "All workflows passing with green badges!"
